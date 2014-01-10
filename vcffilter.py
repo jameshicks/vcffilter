@@ -13,6 +13,7 @@ parser.add_argument('-f','--file', required = True, metavar='vcffile',
                      help='VCF file for processing')
 parser.add_argument('-o','--out', required = False, metavar='outfile',
                      help='File for output')
+parser.add_argument('-r','--region', required = False, nargs=3, help = 'Constrain to region') 
 parser.add_argument('--info_filter', dest='ifilters', nargs=3, action='append',
                      help='Filter on info string') 
 args = parser.parse_args()
@@ -89,6 +90,17 @@ def meets_conditions(inf, conditions):
 ###
 
 conditions = []
+if args.region:
+    chr, start, stop = args.region
+    try:
+        start = int(start) if start != '-1' else float('-inf')
+        stop = int(stop) if stop != '-1' else float('inf')
+    except ValueError:
+        print 'Error: bounds not numeric!'
+        exit(1)
+    def regioncheck(record): 
+        return record['CHROM'] == chr and (start <= int(record['POS']) <= stop)
+    conditions.append(regioncheck)
 # FIXME add qual filter option
 if True:
     conditions.append(lambda x: x['FILTER'] == 'PASS')
