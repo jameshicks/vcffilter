@@ -11,8 +11,8 @@ import os # For os.devnull
 parser = argparse.ArgumentParser(description='Filter variants in a VCF file')
 parser.add_argument('-f','--file', required = True, metavar='vcffile',
                      help='VCF file for processing')
-parser.add_argument('-o','--out', required = False, metavar='outfile',
-                     help='File for output')
+parser.add_argument('-o','--out', required = False, dest='outfile', metavar='outfile',
+                     help='File for output', default=os.devnull)
 parser.add_argument('-r','--region', required = False, nargs=3, help = 'Constrain to region') 
 parser.add_argument('--no-qc', required = False, action='store_false', dest='qcfilter',
                     help="Don't filter on FILTER column == PASS")
@@ -112,10 +112,13 @@ print '%s filters in place' % len(conditions)
 variants_passing_filters = [0] * len(conditions)
 variants_passing_sequential = [0] * len(conditions)
 
-with open(args.file) as vcf:
+with open(args.file) as vcf, open(args.outfile,'w') as outfile:
 
     def outwrite(string):
-        pass
+        if args.outfile == os.devnull:
+            pass
+        else:
+            outfile.write(string)
     header = None
     # Make sure this is a VCF file. The first line of a VQS file
     # has to have VQS in it
@@ -154,4 +157,4 @@ with open(args.file) as vcf:
             print 'Variant passed: %s %s %s' % (record['CHROM'],
                                                    record['POS'],
                                                    record['ID'])
-            outwrite(line.strip())
+            outwrite(line)
