@@ -164,9 +164,11 @@ with open(args.file) as vcf, open(args.outfile,'w') as outfile:
     header = None
     # Make sure this is a VCF file. The first line of a VCS file
     # has to have VCS in it
-    if 'VCF' not in vcf.readline():
+    firstline = vcf.readline()
+    if 'VCF' not in firstline:
         print 'ERROR: File given is not a VCF file'
         exit(1)
+    outwrite(firstline)
     # Skip the metadata
     for record in vcf:
         outwrite(record)
