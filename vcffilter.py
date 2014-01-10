@@ -108,6 +108,7 @@ if args.qcfilter:
 if args.ifilters:
     conditions.extend(parse_info_conditions(args.ifilters))
 
+print '%s filters in place' % len(conditions)
 variants_passing_filters = [0] * len(conditions)
 variants_passing_sequential = [0] * len(conditions)
 
@@ -127,10 +128,12 @@ with open(args.file) as vcf:
         if record.startswith('##'):
             continue
         elif record.startswith('#'):
+            # This is the header line, after this the data starts
             header = record[1:].strip().split()
-        else:
-            # The first line without a # is the start of the data
             break
+        else:
+            print 'ERROR: poorly formed VCF skipped header line'
+            exit(1)
     # Now start working with the actual data
     for variant_count, line in enumerate(vcf):
         l = line.strip().split()
