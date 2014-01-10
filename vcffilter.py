@@ -197,3 +197,7 @@ with open(args.file) as vcf, open(args.outfile,'w') as outfile:
                                                    record['POS'],
                                                    record['ID'])
             outwrite(line)
+
+print '\t'.join(['Filter','Variants passing','Variants passing sequentially'])
+for i,v in enumerate(itertools.izip(variants_passing_filters, variants_passing_sequential)):
+    print '\t'.join([str(i+1)] + [str(x) for x in v])
