@@ -1,16 +1,19 @@
 #!/usr/bin/env python
 
-### Imports
+### Version Check
 ###
 import sys
-import itertools
-import os
-from functools import wraps
 pyversion = sys.version_info[0:2]
 if pyversion < (2, 7):
     print '%s requires Python 2.7 (you have %s)' % (sys.argv[0],
                                                     '.'.join(pyversion))
     exit(1)
+
+### Imports
+###
+import itertools
+import os
+from functools import wraps
 import argparse
 
 ### Arguement parsing
