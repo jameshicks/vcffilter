@@ -162,8 +162,8 @@ with open(args.file) as vcf, open(args.outfile,'w') as outfile:
         else:
             outfile.write(string)
     header = None
-    # Make sure this is a VCF file. The first line of a VQS file
-    # has to have VQS in it
+    # Make sure this is a VCF file. The first line of a VCS file
+    # has to have VCS in it
     if 'VCF' not in vcf.readline():
         print 'ERROR: File given is not a VCF file'
         exit(1)
