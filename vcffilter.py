@@ -14,6 +14,8 @@ parser.add_argument('-f','--file', required = True, metavar='vcffile',
 parser.add_argument('-o','--out', required = False, metavar='outfile',
                      help='File for output')
 parser.add_argument('-r','--region', required = False, nargs=3, help = 'Constrain to region') 
+parser.add_argument('--no-qc', required = False, action='store_false', dest='qcfilter',
+                    help="Don't filter on FILTER column == PASS")
 parser.add_argument('--info_filter', dest='ifilters', nargs=3, action='append',
                      help='Filter on info string') 
 args = parser.parse_args()
@@ -101,8 +103,7 @@ if args.region:
     def regioncheck(record): 
         return record['CHROM'] == chr and (start <= int(record['POS']) <= stop)
     conditions.append(regioncheck)
-# FIXME add qual filter option
-if True:
+if args.qcfilter:
     conditions.append(lambda x: x['FILTER'] == 'PASS')
 if args.ifilters:
     conditions.extend(parse_info_conditions(args.ifilters))
