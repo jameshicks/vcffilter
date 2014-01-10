@@ -5,7 +5,7 @@
 import sys
 import itertools
 import os
-
+from functools import wraps
 pyversion = sys.version_info[0:2]
 if pyversion < (2, 7):
     print '%s requires Python 2.7 (you have %s)' % (sys.argv[0],
@@ -47,26 +47,58 @@ def make_info_condition_function(condition):
             float(v)
         except ValueError:
             raise ValueError('Nonnumeric value (%s) for operator %s' % (value,op))
+    def false_on_keyerror(f):
+        @wraps(f)
+        def wrapper(*args, **kwds):
+            try:
+                return f(*args,**kwds)
+            except KeyError:
+                return False
+        return wrapper
     if op == 'gt':
         err_on_nonnumeric(value)
-        return lambda x: x['INFO'][on] > value
+        @false_on_keyerror
+        def f(x):
+            return x['INFO'][on] > value
+        return f
     elif op == 'gte':
         err_on_nonnumeric(value)
-        return lambda x: x['INFO'][on] >= value
+        @false_on_keyerror
+        def f(x):
+            return x['INFO'][on] >= value
+        return f
     elif op == 'lt':
         err_on_nonnumeric(value)
-        return lambda x: x['INFO'][on] < value
+        @false_on_keyerror
+        def f(x):
+            return x['INFO'][on] < value
+        return f
     elif op == 'lte':
         err_on_nonnumeric(value)
-        return lambda x: x['INFO'][on] <= value
+        @false_on_keyerror
+        def f(x):
+            return x['INFO'][on] <= value
+        return f
     elif op == 'eq':
-        return lambda x: x['INFO'][on] == value
+        @false_on_keyerror
+        def f(x):
+            return x['INFO'][on] == value
+        return f
     elif op == 'neq':
-        return lambda x: x['INFO'][on] != value
+        @false_on_keyerror
+        def f(x):
+            return x['INFO'][on] != value
+        return f
     elif op == 'contains':
-        return lambda x: value in x['INFO'][on] 
+        @false_on_keyerror
+        def f(x):
+            return value in x['INFO'][on]
+        return f
     elif op == 'ncontains':
-        return lambda x: value not in x['INFO'][on]
+        @false_on_keyerror
+        def f(x):
+            return value not in x['INFO'][on]
+        return f
     else:
         raise ValueError('Unknown operation for filter')
 
