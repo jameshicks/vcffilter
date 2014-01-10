@@ -173,7 +173,12 @@ with open(args.file) as vcf, open(args.outfile,'w') as outfile:
     for record in vcf:
         outwrite(record)
         if record.startswith('##'):
-            continue
+            l=record[2:]
+            key, value = l.strip().split('=',1)
+            if key == 'fileDate':
+                d = datetime.date.today()
+                value = d.strftime('%Y%m%d')
+                outwrite('##%s=%s\n' % (key,value))
         elif record.startswith('#'):
             # This is the header line, after this the data starts
             header = record[1:].strip().split()
