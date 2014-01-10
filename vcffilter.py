@@ -2,9 +2,16 @@
 
 ### Imports
 ###
-import argparse
+import sys
 import itertools
-import os # For os.devnull
+import os
+
+pyversion = sys.version_info[0:2]
+if pyversion_info < (2, 7):
+    print '%s requires Python 2.7 (you have %s)' % (sys.argv[0],
+                                                    '.'.join(pyversion))
+    exit(1)
+import argparse
 
 ### Arguement parsing
 ###
