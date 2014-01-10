@@ -31,6 +31,9 @@ parser.add_argument('--no-qc', required = False, action='store_false', dest='qcf
                     help="Do not filter on FILTER column == PASS")
 parser.add_argument('--info_filter', dest='ifilters', nargs=3, action='append',
                      help='Filter on info string') 
+parser.add_argument('--model', dest='model', nargs=1, action='store', required=False,
+                    help='Filter variants consistent with mendelian inheritance',
+                    choices=['dom','rec'], default=None)
 args = parser.parse_args()
 
 ### Functions
@@ -128,10 +131,70 @@ def parse_info(inf):
             info_dict[key] = value
     return info_dict
 
+def parse_genotype(g):
+    if '/' in g:
+        return g.split('/')
+    elif '|' in g:
+        return g.split('|')
+    else:
+        raise ValueError('Bad genotype: %s' % g)
+
+def get_genotypes_from_record(record):
+    vcfcols = {'CHROM', 'POS', 'ID', 'REF', 'ALT',
+               'QUAL', 'FILTER', 'INFO', 'FORMAT'}
+    genotype_cols = {k: record[k] for k in record if k not in vcfcols}
+    fstring = record['FORMAT'].split(':')
+    # FIXME: Make legible
+    genotypes = [parse_genotype(dict(zip(fstring,record[k].split(':')))['GT']) for k in genotype_cols]
+    genotypes = [(int(g[0]),int(g[1])) for g in genotypes]
+    return genotypes
 
 def meets_conditions(inf, conditions):
     ''' Returns a list of whether variants meet the conditions for filtering '''
     return [condition(inf) for condition in conditions]
+
+def ibs(g1, g2):
+    """
+    Returns the number of alleles identical by state between two genotypes
+    Arguements: Two tuples
+    Returns: an integer
+    """
+    g1, g2 = sorted(g1), sorted(g2)
+    if g1 == g2:
+        return 2
+    g2s = set(g2)
+    if g1[0] in g2s or g1[1] in g2s:
+        return 1
+    return 0
+
+def consistent_dominant(record, strong=True):
+    genotypes = get_genotypes_from_record(record)
+    # Consistency with dominance requires two conditions
+    # 1) Everyone must have (at least) one alternate call.
+    # Since these are represented in the VCF files as numbers
+    # greater than 0, we can just sum them.
+    if not all(sum(g) > 0 for g in genotypes):
+        return False
+    # Everybody must have the same genotype
+    if strong and not all(ibs(a,b) == 2 for a,b
+                          in itertools.combinations(genotypes,2)):
+        return False
+    return True
+
+def consistent_recessive(record, strong=True, altcallsonly=True):
+    genotypes = get_genotypes_from_record(record)
+    # Consistency with recessive inheritance requires three conditions:
+    # 1) All genotypes must be homozygous
+    if not all(g[0] == g[1] for g in genotypes):
+        return False
+    # All alleles must be alt calls
+    if altcallsonly and not all(0 not in g for g in genotypes):
+        return False
+    # Everybody should have the same genotype
+    if strong and not all(ibs(a,b) > 0 for a,b
+                          in itertools.combinations(genotypes,2)):
+        return False
+    return True
 
 ### Program logic
 ###
@@ -164,6 +227,17 @@ if args.ifilters:
         return ' '.join(ifilter)
     conditions.extend(parse_info_conditions(args.ifilters))
     condition_desc.extend([ifilter_describer(x) for x in args.ifilters])
+if args.model:
+    model = args.model[0]
+    if model == 'dom':
+        print 'dom'
+        conditions.append(consistent_dominant)
+        condition_desc.append('Dominant')
+    if model == 'rec':
+        print 'rec'
+        conditions.append(consistent_recessive)
+        condition_desc.append('Recessive')
+
 print '%s filters in place' % len(conditions)
 variants_passing_filters = [0] * len(conditions)
 variants_passing_sequential = [0] * len(conditions)
@@ -203,7 +277,7 @@ with open(args.file) as vcf, open(args.outfile,'w') as outfile:
     # Now start working with the actual data
     for variant_count, line in enumerate(vcf):
         l = line.strip().split()
-        record = dict(zip(header,l)[0:9])
+        record = dict(zip(header,l))
         record['QUAL'] = float(record['QUAL'])
         record['INFO'] = parse_info(record['INFO'])
         filters_passed = meets_conditions(record, conditions)
