@@ -32,13 +32,22 @@ def make_info_condition_function(condition):
     # value is the threshold/condition
     on, op, value = condition
     value = make_numeric(value)
+    def err_on_nonnumeric(v):
+        try:
+            float(v)
+        except ValueError:
+            raise ValueError('Nonnumeric value (%s) for operator %s' % (value,op))
     if op == 'gt':
+        err_on_nonnumeric(value)
         return lambda x: x['INFO'][on] > value
     elif op == 'gte':
+        err_on_nonnumeric(value)
         return lambda x: x['INFO'][on] >= value
     elif op == 'lt':
+        err_on_nonnumeric(value)
         return lambda x: x['INFO'][on] < value
     elif op == 'lte':
+        err_on_nonnumeric(value)
         return lambda x: x['INFO'][on] <= value
     elif op == 'eq':
         return lambda x: x['INFO'][on] == value
@@ -67,12 +76,7 @@ def parse_info(inf):
             info_dict[s] = s
         else:
             key, value = s
-            try:
-                # Try to make it numeric
-                value = float(value)
-            except ValueError:
-                # It's not a number
-                pass
+            value = make_numeric(value)
             info_dict[key] = value
     return info_dict
 
