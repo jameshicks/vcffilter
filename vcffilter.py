@@ -7,7 +7,7 @@ import itertools
 import os
 
 pyversion = sys.version_info[0:2]
-if pyversion_info < (2, 7):
+if pyversion < (2, 7):
     print '%s requires Python 2.7 (you have %s)' % (sys.argv[0],
                                                     '.'.join(pyversion))
     exit(1)
