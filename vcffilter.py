@@ -25,8 +25,10 @@ parser.add_argument('-f','--file', required = True, metavar='vcffile',
 parser.add_argument('-o','--out', required = False, dest='outfile', metavar='outfile',
                      help='File for output', default=os.devnull)
 parser.add_argument('-r','--region', required = False, nargs=3, help = 'Constrain to region') 
+parser.add_argument('-q','--qual', required = False, type=float, dest='minqual',
+                    help = 'Minimum quality score to include')
 parser.add_argument('--no-qc', required = False, action='store_false', dest='qcfilter',
-                    help="Don't filter on FILTER column == PASS")
+                    help="Do not filter on FILTER column == PASS")
 parser.add_argument('--info_filter', dest='ifilters', nargs=3, action='append',
                      help='Filter on info string') 
 args = parser.parse_args()
@@ -146,6 +148,8 @@ if args.region:
     def regioncheck(record): 
         return record['CHROM'] == chr and (start <= int(record['POS']) <= stop)
     conditions.append(regioncheck)
+if args.minqual:
+    conditions.append(lambda x: x['QUAL'] > args.minqual)
 if args.qcfilter:
     conditions.append(lambda x: x['FILTER'] == 'PASS')
 if args.ifilters:
@@ -191,6 +195,7 @@ with open(args.file) as vcf, open(args.outfile,'w') as outfile:
     for variant_count, line in enumerate(vcf):
         l = line.strip().split()
         record = dict(zip(header,l)[0:9])
+        record['QUAL'] = float(record['QUAL'])
         record['INFO'] = parse_info(record['INFO'])
         filters_passed = meets_conditions(record, conditions)
         # This might look a little odd because filters_passed is a list
