@@ -137,6 +137,7 @@ def meets_conditions(inf, conditions):
 ###
 
 conditions = []
+condition_desc = []
 if args.region:
     chr, start, stop = args.region
     try:
@@ -148,13 +149,21 @@ if args.region:
     def regioncheck(record): 
         return record['CHROM'] == chr and (start <= int(record['POS']) <= stop)
     conditions.append(regioncheck)
+    condition_desc.append('chr%s:%s-%s' % (chr,start,stop))
 if args.minqual:
     conditions.append(lambda x: x['QUAL'] > args.minqual)
+    condition_desc.append('Qual > %s' % args.minqual)
 if args.qcfilter:
     conditions.append(lambda x: x['FILTER'] == 'PASS')
+    condition_desc.append('FILTER=PASS')
 if args.ifilters:
+    operators = {'gt':'>', 'gte':'>=', 'lt':'<', 'lte':'<=', 'eq': '=', 'neq': '!=',
+                 'contains': 'contains', 'ncontains': 'does not contain'}
+    def ifilter_describer(ifilter):
+        ifilter[1] = operators[ifilter[1]]
+        return ' '.join(ifilter)
     conditions.extend(parse_info_conditions(args.ifilters))
-
+    condition_desc.extend([ifilter_describer(x) for x in args.ifilters])
 print '%s filters in place' % len(conditions)
 variants_passing_filters = [0] * len(conditions)
 variants_passing_sequential = [0] * len(conditions)
@@ -213,7 +222,7 @@ with open(args.file) as vcf, open(args.outfile,'w') as outfile:
                                                    record['POS'],
                                                    record['ID'])
             outwrite(line)
-
-print '\t'.join(['Filter','Variants passing','Variants passing sequentially'])
-for i,v in enumerate(itertools.izip(variants_passing_filters, variants_passing_sequential)):
+print
+print '\t'.join(['Filter','Filter Description','Variants passing','Variants passing sequentially'])
+for i,v in enumerate(itertools.izip(condition_desc, variants_passing_filters, variants_passing_sequential)):
     print '\t'.join([str(i+1)] + [str(x) for x in v])
