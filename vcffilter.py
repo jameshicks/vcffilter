@@ -315,6 +315,7 @@ with open(args.file) as vcf, open(args.outfile,'w') as outfile:
                                                    record['ID'])
             outwrite(line)
 print
+print 'Tested %d varaints' % variant_count
 print '\t'.join(['Filter','Filter Description','Variants passing','Variants passing sequentially'])
 for i,v in enumerate(itertools.izip(condition_desc, variants_passing_filters, variants_passing_sequential)):
     print '\t'.join([str(i+1)] + [str(x) for x in v])
