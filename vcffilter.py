@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import division
 
 ### Version Check
 ###
@@ -27,6 +28,8 @@ parser.add_argument('-o','--out', required = False, dest='outfile', metavar='out
 parser.add_argument('-r','--region', required = False, nargs=3, help = 'Constrain to region') 
 parser.add_argument('-q','--qual', required = False, type=float, dest='minqual',
                     help = 'Minimum quality score to include')
+parser.add_argument('-g','--geno', required = False, default=None, dest='min_call_rate',
+                    help="Minimum genotype call rate", type=float)
 parser.add_argument('--no-qc', required = False, action='store_false', dest='qcfilter',
                     help="Do not filter on FILTER column == PASS")
 parser.add_argument('--info_filter', dest='ifilters', nargs=3, action='append',
@@ -146,7 +149,7 @@ def get_genotypes_from_record(record):
     fstring = record['FORMAT'].split(':')
     # FIXME: Make legible
     genotypes = [parse_genotype(dict(zip(fstring,record[k].split(':')))['GT']) for k in genotype_cols]
-    genotypes = [(int(g[0]),int(g[1])) for g in genotypes]
+    genotypes = [(int(g[0]),int(g[1])) if g != ['.', '.'] else None for g in genotypes]
     return genotypes
 
 def meets_conditions(inf, conditions):
@@ -196,6 +199,11 @@ def consistent_recessive(record, strong=True, altcallsonly=True):
         return False
     return True
 
+def call_rate(record):
+    missing_geno = ['.', '.']
+    genotypes = get_genotypes_from_record(record)
+    return sum(1 for g in genotypes if g) / len(genotypes) 
+
 ### Program logic
 ###
 
@@ -216,6 +224,9 @@ if args.region:
 if args.minqual:
     conditions.append(lambda x: x['QUAL'] > args.minqual)
     condition_desc.append('Qual > %s' % args.minqual)
+if args.min_call_rate:
+    conditions.append(lambda r: call_rate(r) >= args.min_call_rate)
+    condition_desc.append('Call rate >= %s' % args.min_call_rate)
 if args.qcfilter:
     conditions.append(lambda x: x['FILTER'] == 'PASS')
     condition_desc.append('FILTER=PASS')
