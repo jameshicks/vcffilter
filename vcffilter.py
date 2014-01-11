@@ -200,6 +200,7 @@ def consistent_recessive(record, strong=True, altcallsonly=True):
     return True
 
 def call_rate(record):
+    ''' Returns the percent of nonmissing genotypes for a record '''
     genotypes = get_genotypes_from_record(record)
     return sum(1 for g in genotypes if g) / len(genotypes) 
 
@@ -208,6 +209,7 @@ def call_rate(record):
 
 conditions = []
 condition_desc = []
+
 if args.region:
     chr, start, stop = args.region
     try:
@@ -216,35 +218,41 @@ if args.region:
     except ValueError:
         print 'Error: bounds not numeric!'
         exit(1)
+
     def regioncheck(record): 
         return record['CHROM'] == chr and (start <= int(record['POS']) <= stop)
+
     conditions.append(regioncheck)
     condition_desc.append('chr%s:%s-%s' % (chr,start,stop))
+
 if args.minqual:
     conditions.append(lambda x: x['QUAL'] > args.minqual)
     condition_desc.append('Qual > %s' % args.minqual)
+
 if args.min_call_rate:
     conditions.append(lambda r: call_rate(r) >= args.min_call_rate)
     condition_desc.append('Call rate >= %s' % args.min_call_rate)
+
 if args.qcfilter:
     conditions.append(lambda x: x['FILTER'] == 'PASS')
     condition_desc.append('FILTER=PASS')
+
 if args.ifilters:
     operators = {'gt':'>', 'gte':'>=', 'lt':'<', 'lte':'<=', 'eq': '=', 'neq': '!=',
                  'contains': 'contains', 'ncontains': 'does not contain'}
+
     def ifilter_describer(ifilter):
         ifilter[1] = operators[ifilter[1]]
         return ' '.join(ifilter)
+
     conditions.extend(parse_info_conditions(args.ifilters))
     condition_desc.extend([ifilter_describer(x) for x in args.ifilters])
+
 if args.model:
-    model = args.model[0]
-    if model == 'dom':
-        print 'dom'
+    if args.model[0] == 'dom':
         conditions.append(consistent_dominant)
         condition_desc.append('Dominant')
-    if model == 'rec':
-        print 'rec'
+    if args.model[0] == 'rec':
         conditions.append(consistent_recessive)
         condition_desc.append('Recessive')
 
