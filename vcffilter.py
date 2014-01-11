@@ -171,7 +171,7 @@ def ibs(g1, g2):
     return 0
 
 def consistent_dominant(record, strong=True):
-    genotypes = get_genotypes_from_record(record)
+    genotypes = [g for g in get_genotypes_from_record(record) if g]
     # Consistency with dominance requires two conditions
     # 1) Everyone must have (at least) one alternate call.
     # Since these are represented in the VCF files as numbers
@@ -185,7 +185,7 @@ def consistent_dominant(record, strong=True):
     return True
 
 def consistent_recessive(record, strong=True, altcallsonly=True):
-    genotypes = get_genotypes_from_record(record)
+    genotypes = [g for g in get_genotypes_from_record(record) if g]
     # Consistency with recessive inheritance requires three conditions:
     # 1) All genotypes must be homozygous
     if not all(g[0] == g[1] for g in genotypes):
@@ -200,7 +200,6 @@ def consistent_recessive(record, strong=True, altcallsonly=True):
     return True
 
 def call_rate(record):
-    missing_geno = ['.', '.']
     genotypes = get_genotypes_from_record(record)
     return sum(1 for g in genotypes if g) / len(genotypes) 
 
