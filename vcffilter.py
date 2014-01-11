@@ -136,20 +136,24 @@ def parse_info(inf):
 
 def parse_genotype(g):
     if '/' in g:
-        return g.split('/')
+        g = g.split('/')
     elif '|' in g:
-        return g.split('|')
+        g = g.split('|')
     else:
         raise ValueError('Bad genotype: %s' % g)
-
+    if g == ['.', '.']:
+        return None
+    else:
+        return int(g[0]), int(g[1])
 def get_genotypes_from_record(record):
     vcfcols = {'CHROM', 'POS', 'ID', 'REF', 'ALT',
                'QUAL', 'FILTER', 'INFO', 'FORMAT'}
-    genotype_cols = {k: record[k] for k in record if k not in vcfcols}
-    fstring = record['FORMAT'].split(':')
-    # FIXME: Make legible
-    genotypes = [parse_genotype(dict(zip(fstring,record[k].split(':')))['GT']) for k in genotype_cols]
-    genotypes = [(int(g[0]),int(g[1])) if g != ['.', '.'] else None for g in genotypes]
+
+    genotype_cols = {k: record[k].split(':') for k in record if k not in vcfcols}
+    format = record['FORMAT'].split(':')
+
+    genotypes = [dict(zip(format,genotype_cols[k]))['GT'] for k in genotype_cols]
+    genotypes = [parse_genotype(g) for g in genotypes]
     return genotypes
 
 def meets_conditions(inf, conditions):
