@@ -67,7 +67,11 @@ def make_info_condition_function(condition):
             except KeyError:
                 return False
         return wrapper
-    if op == 'gt':
+    if op == 'is' and value == 'set':
+        return lambda x: on in x['INFO']
+    elif op == 'not' and value == 'set':
+        return lambda x: on not in x['INFO']
+    elif op == 'gt':
         err_on_nonnumeric(value)
         @false_on_keyerror
         def f(x):
@@ -243,7 +247,8 @@ if args.min_call_rate:
 
 if args.ifilters:
     operators = {'gt':'>', 'gte':'>=', 'lt':'<', 'lte':'<=', 'eq': '=', 'neq': '!=',
-                 'contains': 'contains', 'ncontains': 'does not contain'}
+                 'contains': 'contains', 'ncontains': 'does not contain',
+                 'is':'is', 'not':'not'}
 
     def ifilter_describer(ifilter):
         ifilter[1] = operators[ifilter[1]]

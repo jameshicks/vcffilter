@@ -7,10 +7,11 @@ vcffilter allows you to filter VCF files to prioritize variants in sequencing st
 
 Info field filters 
 -----
-the `--info_filter` flag allows you to filter based on the contents of the INFO field. To avoid problems with shells, the symbols >, >=, <, <=, ==, != are replaced with gt, gte, lt, lte, eq, and neq, respecitively. You can also filter strings with `contains` and `ncontains`.
+the `--info_filter` flag allows you to filter based on the contents of the INFO field. To avoid problems with shells, the symbols >, >=, <, <=, ==, != are replaced with gt, gte, lt, lte, eq, and neq, respecitively. INFO flags can be filtered with `--info_filter <FLAG> is set` and `--info_filter <FLAG> not set`. You can also filter strings with `contains` and `ncontains`.
 
 Examples:
 * `--info_filter CG gt 2`: Only return records with GERP scores greater than 2
+* `--info_filter DB not set`: Return variants not in dbSNP
 * `--info_filter PH contains damaging`: Only return records predicted damaging by polyphen
 
 Model-based filtering
