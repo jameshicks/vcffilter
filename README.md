@@ -25,7 +25,8 @@ Other filters
 
 Filter priority
 -----
-Filters are applied in the following order
+Filters are applied in the following order:
+
 1. Region
 2. Minimum quality
 3. Minimum call rate
