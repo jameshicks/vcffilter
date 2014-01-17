@@ -233,13 +233,13 @@ if args.minqual:
     conditions.append(lambda x: x['QUAL'] > args.minqual)
     condition_desc.append('Qual > %s' % args.minqual)
 
-if args.min_call_rate:
-    conditions.append(lambda r: call_rate(r) >= args.min_call_rate)
-    condition_desc.append('Call rate >= %s' % args.min_call_rate)
-
 if args.qcfilter:
     conditions.append(lambda x: x['FILTER'] == 'PASS')
     condition_desc.append('FILTER=PASS')
+
+if args.min_call_rate:
+    conditions.append(lambda r: call_rate(r) >= args.min_call_rate)
+    condition_desc.append('Call rate >= %s' % args.min_call_rate)
 
 if args.ifilters:
     operators = {'gt':'>', 'gte':'>=', 'lt':'<', 'lte':'<=', 'eq': '=', 'neq': '!=',

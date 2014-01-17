@@ -30,7 +30,7 @@ Filters are applied in the following order:
 
 1. Region
 2. Minimum quality
-3. Minimum call rate
-4. FILTER = 'PASS'
+3. FILTER = 'PASS'
+4. Minimum call rate
 5. Info filters, in order they were specified.
 6. Mendelian Model filters
