@@ -20,6 +20,7 @@ You can filter for variants matching a Mendelian genetic model with the `--model
 Other filters
 -----
 * `--region 5 10000 20000` filters only variants within Chromosome 5, from 10000 to 20000bp 
+* `--geno .5` requires that at least half of individuals must have a genotype called
 * `--no-qc` doesn't add the filter (on by default) that the FILTER column equals 'PASS' 
 * `--qual 25` only returns variants with QUAL field > 25  
 
