@@ -29,8 +29,10 @@ parser.add_argument('-f', '--file', required=True, metavar='vcffile',
                     help='VCF file for processing')
 parser.add_argument('-o', '--out', required=False, dest='outfile', metavar='outfile',
                     help='File for output', default=os.devnull)
-parser.add_argument(
-    '-r', '--region', required=False, nargs=3, help='Constrain to region')
+parser.add_argument('-r', '--region', required=False, nargs=3,
+                    help='Constrain to region')
+parser.add_argument('--rs', action='store_true', dest='rsonly',
+                    help='Only return variants with rs numbers')
 parser.add_argument('-q', '--qual', required=False, type=float, dest='minqual',
                     help='Minimum quality score to include')
 parser.add_argument('-g', '--geno', required=False, default=None, dest='min_call_rate',
@@ -42,8 +44,8 @@ parser.add_argument('--info_filter', dest='ifilters', nargs=3, action='append',
 parser.add_argument('--model', dest='model', nargs=1, action='store', required=False,
                     help='Filter variants consistent with mendelian inheritance',
                     choices=['dom', 'rec'], default=None)
-parser.add_argument(
-    '--quiet', action='store_true', help='Suppress some output')
+parser.add_argument('--quiet', action='store_true',
+                    help='Suppress some output')
 args = parser.parse_args()
 
 # Functions
@@ -345,6 +347,10 @@ with smartopen(args.file) as vcf, smartopen(args.outfile, 'w') as outfile:
     for variant_count, line in enumerate(vcf):
         l = line.strip().split()
         record = dict(zip(header, l))
+
+        if args.rsonly and not record['ID'].startswith('rs'):
+            continue
+
         record['QUAL'] = float(record['QUAL'])
         record['INFO'] = parse_info(record['INFO'])
         filters_passed = meets_conditions(record, conditions)
