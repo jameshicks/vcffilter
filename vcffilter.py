@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from __future__ import division
 
-### Version Check
+# Version Check
 ###
 import sys
 pyversion = sys.version_info[0:2]
@@ -10,37 +10,46 @@ if pyversion < (2, 7):
                                                     '.'.join(pyversion))
     exit(1)
 
-### Imports
+# Imports
 ###
 import itertools
 import datetime
 import os
-from functools import wraps
 import argparse
+import gzip
+import bz2
 
-### Arguement parsing
+from functools import wraps
+
+
+# Arguement parsing
 ###
 parser = argparse.ArgumentParser(description='Filter variants in a VCF file')
-parser.add_argument('-f','--file', required = True, metavar='vcffile',
-                     help='VCF file for processing')
-parser.add_argument('-o','--out', required = False, dest='outfile', metavar='outfile',
-                     help='File for output', default=os.devnull)
-parser.add_argument('-r','--region', required = False, nargs=3, help = 'Constrain to region') 
-parser.add_argument('-q','--qual', required = False, type=float, dest='minqual',
-                    help = 'Minimum quality score to include')
-parser.add_argument('-g','--geno', required = False, default=None, dest='min_call_rate',
+parser.add_argument('-f', '--file', required=True, metavar='vcffile',
+                    help='VCF file for processing')
+parser.add_argument('-o', '--out', required=False, dest='outfile', metavar='outfile',
+                    help='File for output', default=os.devnull)
+parser.add_argument(
+    '-r', '--region', required=False, nargs=3, help='Constrain to region')
+parser.add_argument('-q', '--qual', required=False, type=float, dest='minqual',
+                    help='Minimum quality score to include')
+parser.add_argument('-g', '--geno', required=False, default=None, dest='min_call_rate',
                     help="Minimum genotype call rate", type=float)
-parser.add_argument('--no-qc', required = False, action='store_false', dest='qcfilter',
+parser.add_argument('--no-qc', required=False, action='store_false', dest='qcfilter',
                     help="Do not filter on FILTER column == PASS")
 parser.add_argument('--info_filter', dest='ifilters', nargs=3, action='append',
-                     help='Filter on info string') 
+                    help='Filter on info string')
 parser.add_argument('--model', dest='model', nargs=1, action='store', required=False,
                     help='Filter variants consistent with mendelian inheritance',
-                    choices=['dom','rec'], default=None)
+                    choices=['dom', 'rec'], default=None)
+parser.add_argument(
+    '--quiet', action='store_true', help='Suppress some output')
 args = parser.parse_args()
 
-### Functions
+# Functions
 ###
+
+
 def make_numeric(value):
     ''' Makes a value numeric if possible '''
     try:
@@ -48,22 +57,26 @@ def make_numeric(value):
     except ValueError:
         return value
 
+
 def make_info_condition_function(condition):
     # on is the field we're filtering on
     # op is the operation we're performing on the field
     # value is the threshold/condition
     on, op, value = condition
     value = make_numeric(value)
+
     def err_on_nonnumeric(v):
         try:
             float(v)
         except ValueError:
-            raise ValueError('Nonnumeric value (%s) for operator %s' % (value,op))
+            raise ValueError(
+                'Nonnumeric value (%s) for operator %s' % (value, op))
+
     def false_on_keyerror(f):
         @wraps(f)
         def wrapper(*args, **kwds):
             try:
-                return f(*args,**kwds)
+                return f(*args, **kwds)
             except KeyError:
                 return False
         return wrapper
@@ -73,24 +86,28 @@ def make_info_condition_function(condition):
         return lambda x: on not in x['INFO']
     elif op == 'gt':
         err_on_nonnumeric(value)
+
         @false_on_keyerror
         def f(x):
             return x['INFO'][on] > value
         return f
     elif op == 'gte':
         err_on_nonnumeric(value)
+
         @false_on_keyerror
         def f(x):
             return x['INFO'][on] >= value
         return f
     elif op == 'lt':
         err_on_nonnumeric(value)
+
         @false_on_keyerror
         def f(x):
             return x['INFO'][on] < value
         return f
     elif op == 'lte':
         err_on_nonnumeric(value)
+
         @false_on_keyerror
         def f(x):
             return x['INFO'][on] <= value
@@ -118,10 +135,12 @@ def make_info_condition_function(condition):
     else:
         raise ValueError('Unknown operation for filter')
 
+
 def parse_info_conditions(conditionlist):
     ''' Makes closures for the conditions '''
     return [make_info_condition_function(condition)
             for condition in conditionlist]
+
 
 def parse_info(inf):
     ''' Parses a VCF info string into a key-value dictionary '''
@@ -138,6 +157,7 @@ def parse_info(inf):
             info_dict[key] = value
     return info_dict
 
+
 def parse_genotype(g):
     if '/' in g:
         g = g.split('/')
@@ -149,6 +169,8 @@ def parse_genotype(g):
         return None
     else:
         return int(g[0]), int(g[1])
+
+
 def get_genotypes_from_record(record):
     vcfcols = {'CHROM', 'POS', 'ID', 'REF', 'ALT',
                'QUAL', 'FILTER', 'INFO', 'FORMAT'}
@@ -156,13 +178,16 @@ def get_genotypes_from_record(record):
     genotype_cols = {k: record[k].split(':') for k in record if k not in vcfcols}
     format = record['FORMAT'].split(':')
 
-    genotypes = [dict(zip(format,genotype_cols[k]))['GT'] for k in genotype_cols]
+    genotypes = [dict(zip(format, genotype_cols[k]))['GT']
+                 for k in genotype_cols]
     genotypes = [parse_genotype(g) for g in genotypes]
     return genotypes
+
 
 def meets_conditions(inf, conditions):
     ''' Returns a list of whether variants meet the conditions for filtering '''
     return [condition(inf) for condition in conditions]
+
 
 def ibs(g1, g2):
     """
@@ -178,6 +203,7 @@ def ibs(g1, g2):
         return 1
     return 0
 
+
 def consistent_dominant(record, strong=True):
     genotypes = [g for g in get_genotypes_from_record(record) if g]
     # Consistency with dominance requires two conditions
@@ -187,10 +213,11 @@ def consistent_dominant(record, strong=True):
     if not all(sum(g) > 0 for g in genotypes):
         return False
     # Everybody must have the same genotype
-    if strong and not all(ibs(a,b) == 2 for a,b
-                          in itertools.combinations(genotypes,2)):
+    if strong and not all(ibs(a, b) == 2 for a, b
+                          in itertools.combinations(genotypes, 2)):
         return False
     return True
+
 
 def consistent_recessive(record, strong=True, altcallsonly=True):
     genotypes = [g for g in get_genotypes_from_record(record) if g]
@@ -202,17 +229,30 @@ def consistent_recessive(record, strong=True, altcallsonly=True):
     if altcallsonly and not all(0 not in g for g in genotypes):
         return False
     # Everybody should have the same genotype
-    if strong and not all(ibs(a,b) > 0 for a,b
-                          in itertools.combinations(genotypes,2)):
+    if strong and not all(ibs(a, b) > 0 for a, b
+                          in itertools.combinations(genotypes, 2)):
         return False
     return True
+
 
 def call_rate(record):
     ''' Returns the percent of nonmissing genotypes for a record '''
     genotypes = get_genotypes_from_record(record)
-    return sum(1 for g in genotypes if g) / len(genotypes) 
+    return sum(1 for g in genotypes if g) / len(genotypes)
 
-### Program logic
+
+def smartopen(filename, mode='r'):
+    """
+    Seamlessly open gzipped and bzipped2 files. Use like regular open
+    """
+    if filename.endswith('.gz'):
+        return gzip.GzipFile(filename, mode, compresslevel=5)
+    elif filename.endswith('.bz2'):
+        return bz2.BZ2File(filename, mode)
+    else:
+        return open(filename, mode)
+
+# Program logic
 ###
 
 conditions = []
@@ -227,11 +267,11 @@ if args.region:
         print 'Error: bounds not numeric!'
         exit(1)
 
-    def regioncheck(record): 
+    def regioncheck(record):
         return record['CHROM'] == chr and (start <= int(record['POS']) <= stop)
 
     conditions.append(regioncheck)
-    condition_desc.append('chr%s:%s-%s' % (chr,start,stop))
+    condition_desc.append('chr%s:%s-%s' % (chr, start, stop))
 
 if args.minqual:
     conditions.append(lambda x: x['QUAL'] > args.minqual)
@@ -246,9 +286,9 @@ if args.min_call_rate:
     condition_desc.append('Call rate >= %s' % args.min_call_rate)
 
 if args.ifilters:
-    operators = {'gt':'>', 'gte':'>=', 'lt':'<', 'lte':'<=', 'eq': '=', 'neq': '!=',
+    operators = {'gt': '>', 'gte': '>=', 'lt': '<', 'lte': '<=', 'eq': '=', 'neq': '!=',
                  'contains': 'contains', 'ncontains': 'does not contain',
-                 'is':'is', 'not':'not'}
+                 'is': 'is', 'not': 'not'}
 
     def ifilter_describer(ifilter):
         ifilter[1] = operators[ifilter[1]]
@@ -269,7 +309,7 @@ print '%s filters in place' % len(conditions)
 variants_passing_filters = [0] * len(conditions)
 variants_passing_sequential = [0] * len(conditions)
 
-with open(args.file) as vcf, open(args.outfile,'w') as outfile:
+with smartopen(args.file) as vcf, smartopen(args.outfile, 'w') as outfile:
 
     def outwrite(string):
         if args.outfile == os.devnull:
@@ -288,12 +328,12 @@ with open(args.file) as vcf, open(args.outfile,'w') as outfile:
     for record in vcf:
         outwrite(record)
         if record.startswith('##'):
-            l=record[2:]
-            key, value = l.strip().split('=',1)
+            l = record[2:]
+            key, value = l.strip().split('=', 1)
             if key == 'fileDate':
                 d = datetime.date.today()
                 value = d.strftime('%Y%m%d')
-                outwrite('##%s=%s\n' % (key,value))
+                outwrite('##%s=%s\n' % (key, value))
         elif record.startswith('#'):
             # This is the header line, after this the data starts
             header = record[1:].strip().split()
@@ -304,27 +344,28 @@ with open(args.file) as vcf, open(args.outfile,'w') as outfile:
     # Now start working with the actual data
     for variant_count, line in enumerate(vcf):
         l = line.strip().split()
-        record = dict(zip(header,l))
+        record = dict(zip(header, l))
         record['QUAL'] = float(record['QUAL'])
         record['INFO'] = parse_info(record['INFO'])
         filters_passed = meets_conditions(record, conditions)
         # This might look a little odd because filters_passed is a list
         # of True/False values. Bools in python are just special integers and
-        # you can do arithmetic with them: 
+        # you can do arithmetic with them:
         #    True == 1, False == 0. So True + 1 == (1 + 1) == 2.
         # Does it pass the filter (without regard for order)?
-        for i,x in enumerate(filters_passed):
+        for i, x in enumerate(filters_passed):
             variants_passing_filters[i] += x
         # How does it pass the filters (sequentially)?
-        for i,x in enumerate(itertools.takewhile(lambda x: x, filters_passed)):
-            variants_passing_sequential[i] += x 
-        if all(filters_passed):
-            print 'Variant passed: %s %s %s' % (record['CHROM'],
-                                                   record['POS'],
-                                                   record['ID'])
+        for i, x in enumerate(itertools.takewhile(lambda x: x, filters_passed)):
+            variants_passing_sequential[i] += x
+        if all(filters_passed) and not args.quiet:
+            if not args.quiet:
+                print 'Variant passed: %s %s %s' % (record['CHROM'],
+                                                    record['POS'],
+                                                    record['ID'])
             outwrite(line)
 print
 print 'Tested %d varaints' % variant_count
-print '\t'.join(['Filter','Filter Description','Variants passing','Variants passing sequentially'])
-for i,v in enumerate(itertools.izip(condition_desc, variants_passing_filters, variants_passing_sequential)):
+print '\t'.join(['Filter', 'Filter Description', 'Variants passing', 'Variants passing sequentially'])
+for i, v in enumerate(itertools.izip(condition_desc, variants_passing_filters, variants_passing_sequential)):
     print '\t'.join([str(i+1)] + [str(x) for x in v])
