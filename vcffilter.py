@@ -364,7 +364,7 @@ with smartopen(args.file) as vcf, smartopen(args.outfile, 'w') as outfile:
         # How does it pass the filters (sequentially)?
         for i, x in enumerate(itertools.takewhile(lambda x: x, filters_passed)):
             variants_passing_sequential[i] += x
-        if all(filters_passed) and not args.quiet:
+        if all(filters_passed):
             if not args.quiet:
                 print 'Variant passed: %s %s %s' % (record['CHROM'],
                                                     record['POS'],
