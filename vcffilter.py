@@ -33,6 +33,8 @@ parser.add_argument('-r', '--region', required=False, nargs=3,
                     help='Constrain to region')
 parser.add_argument('--rs', action='store_true', dest='rsonly',
                     help='Only return variants with rs numbers')
+parser.add_argument('--snv', action='store_true', dest='snvonly',
+                    help='Only return SNVs')
 parser.add_argument('-q', '--qual', required=False, type=float, dest='minqual',
                     help='Minimum quality score to include')
 parser.add_argument('-g', '--geno', required=False, default=None, dest='min_call_rate',
@@ -350,6 +352,10 @@ with smartopen(args.file) as vcf, smartopen(args.outfile, 'w') as outfile:
 
         if args.rsonly and not record['ID'].startswith('rs'):
             continue
+
+        if args.snvonly and not (len(record['ALT']) == len(record['REF']) == 1):
+            continue
+
 
         record['QUAL'] = float(record['QUAL'])
         record['INFO'] = parse_info(record['INFO'])
